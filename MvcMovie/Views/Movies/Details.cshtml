@@ -1,0 +1,131 @@
+﻿@model MvcMovie.Models.Movie
+@using System;
+@using System.Collections.Generic;
+@using System.Linq;
+@using System.Threading.Tasks;
+@using Microsoft.AspNetCore.Mvc;
+@using Microsoft.AspNetCore.Mvc.Rendering;
+@using Microsoft.EntityFrameworkCore;
+@using MvcMovie.Models;
+@using System.Net;
+@using System.IO;
+@using static MvcMovie.HelpClass;
+@using Newtonsoft.Json;
+
+@{
+    ViewData["Title"] = "Details";
+    string apiKey = "7c62e35c7db3b5dc34f383e4b9603d99";
+}
+
+@{
+    string[] top10 = Model.Top10String.Split(',');
+    var moviesList = MovieList.movies;
+    List<Movie> top10Movies = new List<Movie>();
+    foreach (var id_movie in top10)
+    {
+        if (id_movie == "0" || id_movie == "") { break; }
+        foreach (var mov in moviesList)
+        {
+            if (mov.id_movie == long.Parse(id_movie)) { top10Movies.Add(mov); break; }
+        }
+    }
+    string[] tags = Model.TagsString.Split(',');
+
+
+}
+
+
+
+<h2>Details</h2>
+
+<div>
+    <h4>Movie</h4>
+    <hr />
+    <dl class="dl-horizontal">
+        <dt>
+            @Html.DisplayNameFor(model => model.Id)
+        </dt>
+        <dd>
+            @Html.DisplayFor(model => model.Id)
+        </dd>
+        <dt>
+            @Html.DisplayNameFor(model => model.Name)
+        </dt>
+        <dd>
+            @Html.DisplayFor(model => model.Name)
+        </dd>
+        <dt>
+            @Html.DisplayNameFor(model => model.Rating)
+        </dt>
+        <dd>
+            @Html.DisplayFor(model => model.Rating)
+        </dd>
+        <dt>
+            @Html.DisplayNameFor(model => model.ActorsString)
+        </dt>
+        <dd>
+            @Html.DisplayFor(model => model.ActorsString)
+        </dd>
+        <dt>
+            @Html.DisplayNameFor(model => model.DirectorsString)
+        </dt>
+        <dd>
+            @Html.DisplayFor(model => model.DirectorsString)
+        </dd>
+        <dt>
+            @Html.DisplayNameFor(model => model.TagsString)
+        </dt>
+        <dd>
+            @{ foreach(var tag in tags)
+                {
+                    <a asp-action="Index" asp-route-searchtag="@tag">@tag,</a>
+                }
+
+            }
+        </dd>
+        <dt>
+            Overview
+        </dt>
+        <dd>
+            @{HttpWebRequest apiRequestOverview = WebRequest.Create("https://api.themoviedb.org/3/search/movie?api_key=" + apiKey + "&language=en-US&query=" + Model.Name + "&page=" + 1 + "&include_adult=false") as HttpWebRequest;
+                string apiResponseOverview = "";
+                using (HttpWebResponse response = apiRequestOverview.GetResponse() as HttpWebResponse)
+                {
+                    StreamReader reader = new StreamReader(response.GetResponseStream());
+                    apiResponseOverview = reader.ReadToEnd();
+                }
+                string overview;
+                ResponseSearchMovies rootObjectOverview = JsonConvert.DeserializeObject<ResponseSearchMovies>
+                    (apiResponseOverview);
+                try { overview = rootObjectOverview.results[0].overview; } catch { overview = "no overview"; }
+            }
+            <p>@overview</p>
+        </dd>
+        <dt>
+            @Html.DisplayNameFor(model => model.Top10String)
+        </dt>
+        <dd>
+            @foreach (var movie in top10Movies)
+            {
+                string image;
+                {
+                    HttpWebRequest apiRequest = WebRequest.Create("https://api.themoviedb.org/3/search/movie?api_key=" + apiKey + "&language=en-US&query=" + movie.Name + "&page=" + 1 + "&include_adult=false") as HttpWebRequest;
+                    string apiResponse = "";
+                    using (HttpWebResponse response = apiRequest.GetResponse() as HttpWebResponse)
+                    {
+                        StreamReader reader = new StreamReader(response.GetResponseStream());
+                        apiResponse = reader.ReadToEnd();
+                    }
+
+                    ResponseSearchMovies rootObject = JsonConvert.DeserializeObject<ResponseSearchMovies>(apiResponse);
+                    try { image = "https://image.tmdb.org/t/p/w92/" + rootObject.results[0].poster_path; } catch { image = "no picture"; }
+                }
+                <a asp-action="Details" asp-route-id="@movie.Id">@movie.Name,</a>
+                <p><img src="@image"></p>
+            }
+        </dd>
+    </dl>
+</div>
+<div>
+    <a asp-action="Index">Back to List</a>
+</div>
